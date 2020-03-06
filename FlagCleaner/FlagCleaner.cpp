@@ -1,20 +1,63 @@
-// FlagCleaner.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
+#include <Windows.h>
+
+using namespace std;
 
 int main()
 {
-    std::cout << "Hello World!\n";
+	HWND hwnd = FindWindow(NULL, L"Git Gui");
+	if (hwnd == NULL)
+	{
+		cout << "Could not find target window." << endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+
+	DWORD pid = NULL;
+	DWORD tid = GetWindowThreadProcessId(hwnd, &pid);
+	if (tid == NULL)
+	{
+		cout << "Could not get thread ID of the target window." << endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+
+	HMODULE dll = LoadLibraryEx(L"keyflagcleaner.dll", NULL, DONT_RESOLVE_DLL_REFERENCES);
+
+	if (dll == NULL)
+	{
+		cout << "The DLL could not be found." << endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+
+	HOOKPROC addr = (HOOKPROC)GetProcAddress(dll, "AttachMe");
+	if (addr == NULL) {
+		cout << "The function was not found." << endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+
+	HHOOK handle = SetWindowsHookEx(WH_GETMESSAGE, addr, dll, tid);
+	if (handle == NULL) {
+		cout << "Couldn't set the hook with SetWindowsHookEx." << endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+
+	PostThreadMessage(tid, WM_NULL, NULL, NULL);
+
+	cout << "Press any key to unhook (This will unload the DLL)." << endl;
+	system("pause > nul");
+
+	BOOL unhook = UnhookWindowsHookEx(handle);
+	if (unhook == FALSE) {
+		cout << "Could not remove the hook." << endl;
+		system("pause");
+		return EXIT_FAILURE;
+	}
+
+	cout << "Done. Press any key to exit." << endl;
+	system("pause > nul");
+	return EXIT_SUCCESS;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
